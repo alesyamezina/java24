@@ -4,13 +4,32 @@ import static java.lang.Math.abs;
 
 public class MyHashMap<K, V> {
 
+    private static class Node<K, V> {
+        final K key;
+        V value;
+        Node<K, V> next;
+
+        public Node(K key, V value) {
+            this.key = key;
+            this.value = value;
+            this.next = null;
+        }
+    }
     private static final int DEFAULT_CAPACITY = 16;
     private static final float DEFAULT_LOAD_FACTOR = 0.75F;
-    private Object[] table;
+    private Node[] table;
     private int size;
 
     public MyHashMap() {
-        this.table = new Object[DEFAULT_CAPACITY];
+        this.table = new Node[DEFAULT_CAPACITY];
+        this.size = 0;
+    }
+
+    public MyHashMap(int capacity) {
+        if (capacity < 1) {
+            throw new IllegalArgumentException("capacity must be >= 1");
+        }
+        this.table = new Node[capacity];
         this.size = 0;
     }
 
@@ -18,91 +37,97 @@ public class MyHashMap<K, V> {
         return size;
     }
 
-    private int hash(K key) {
-        int h = abs(key.hashCode());
-        return h % table.length;
+    private int indexHash(K key) {
+        return abs(key.hashCode()) % table.length;
     }
 
-    private Node<K, V> getIndex(int index, K key) {
-        Node<K, V> node = (Node<K, V>) table[index];
+    public V get(K key) {
+        Node<K, V> node = table[indexHash(key)];
+
         while (node != null) {
             if (node.key.equals(key)) {
-                return node;
+                return node.value;
             }
             node = node.next;
         }
         return null;
     }
 
-    public V get(K key) {
-        int index = hash(key);
-        Node<K, V> node = getIndex(index, key);
-        if (node != null)
-            return node.value;
-        else
-            return null;
-    }
-
-    public V put(K key, V value) {
-        int index = hash(key);
-        Node<K, V> node = getIndex(index, key);
-
-        if (node != null) {
-            node.value = value;
-            return node.value;
-        }
-
-        Node<K, V> newNode = new Node<>(key, value);
-        newNode.next = (Node<K, V>) table[index];
-        table[index] = newNode;
-        size++;
-
+    public void put(K key, V value) {
         if ((float) size / table.length > DEFAULT_LOAD_FACTOR) {
             resizeTable();
         }
 
-        return null;
-    }
+        int indexNewNode = indexHash(key);
+        Node<K, V> newNode = new Node<>(key, value);
 
-    private void resizeTable() {
-        Object[] oldTable = table;
-        int newCapacity = oldTable.length * 2;
-        table = new Object[newCapacity];
+        if (table[indexNewNode] == null) {
+            table[indexNewNode] = newNode;
+            size++;
+        } else {
+            Node<K, V> prevNode = null;
+            Node<K, V> node = table[indexHash(key)];
 
-        for (int i = 0; i < oldTable.length; i++) {
-            Node<K, V> node = (Node<K, V>) oldTable[i];
-            while (node != null) {
-                int index = hash(node.key) % newCapacity;
-                node.next = (Node<K, V>) table[index];
-                table[index] = node;
+            while (node != null){
+                if (node.key.equals(key)) {
+                    node.value = value;
+                    break;
+                }
+                prevNode = node;
                 node = node.next;
             }
+            if (prevNode != null) {
+                prevNode.next = newNode;
+            }
+            size++;
         }
     }
 
-    public boolean containsKey(K key) {
-        return getIndex(hash(key), key) != null;
-    }
-
-    public V remove(K key) {
-        int index = hash(key);
+    public void remove(K key) {
         Node<K, V> prevNode = null;
-        Node<K, V> node = (Node<K, V>) table[index];
+        Node<K, V> node = table[indexHash(key)];
 
         while (node != null) {
             if (node.key.equals(key)) {
                 if (prevNode == null) {
-                    table[index] = node.next;
+                    table[indexHash(key)] = node.next;
                 } else {
                     prevNode.next = node.next;
                 }
                 size--;
-                return node.value;
             }
             prevNode = node;
             node = node.next;
-            return node.value;
+
         }
-        return null;
+
+    }
+
+    public boolean containsKey(K key) {
+        Node<K, V> node = table[indexHash(key)];
+
+        while (node != null) {
+            if (node.key.equals(key)) {
+                return true;
+            }
+            node = node.next;
+        }
+        return false;
+    }
+
+    private void resizeTable() {
+        Node<K, V>[] oldTable = table;
+        int newCapacity = oldTable.length * 2;
+        table = new Node[newCapacity];
+
+        for (int i = 0; i < oldTable.length; i++) {
+            Node<K, V> node = oldTable[i];
+            while (node != null) {
+                int index = indexHash(node.key) % newCapacity;
+                node.next = table[index];
+                table[index] = node;
+                node = node.next;
+            }
+        }
     }
 }

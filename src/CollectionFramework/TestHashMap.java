@@ -17,6 +17,7 @@ public class TestHashMap {
         System.out.println(hmap.get(3));
         System.out.println(hmap.getSize());
         System.out.println(hmap.containsKey("second"));
+        System.out.println(hmap.containsKey("66"));
 
     }
 }
